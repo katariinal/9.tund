@@ -13,7 +13,29 @@ class User{
     function logInUser($email, $hash){
         
         $response = new StdClass();
-         
+        //kas selline email olemas 
+        $stmt = $this->connection->prepare("SELECT id FROM user_sample WHERE email=?");
+        $stmt->bind_param("s", $email);
+        $stmt->bind_result($id);
+        $stmt->execute();
+        
+        if(!$stmt->fetch()){
+            //ei ole
+            $error = new StdClass();
+            $error->id = 0;
+            $error->message = "Sellist e-maili ei ole olemas";
+            
+            $response->error = $error;
+            //lõpetan
+            return $response;
+        }
+        
+        //********************
+        //*****OLULINE********
+        //********************
+        //paneme eelmise käsu kinni
+        $stmt->close();
+        
         $stmt = $this->connection->prepare("SELECT id, email FROM user_sample WHERE email=? AND password=?");
         $stmt->bind_param("ss", $email, $hash);
         $stmt->bind_result($id_from_db, $email_from_db);
@@ -34,7 +56,11 @@ class User{
     
             
         }else{
-            echo "Wrong credentials!";
+            $error = new StdClass();
+            $error->id = 1;
+            $error->message = "Vale parool!";
+            
+            $response->error = $error;
         }
         $stmt->close();
         
