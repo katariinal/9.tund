@@ -11,34 +11,80 @@ class User{
     }
     
     function logInUser($email, $hash){
+        
+        $response = new StdClass();
          
         $stmt = $this->connection->prepare("SELECT id, email FROM user_sample WHERE email=? AND password=?");
         $stmt->bind_param("ss", $email, $hash);
         $stmt->bind_result($id_from_db, $email_from_db);
         $stmt->execute();
         if($stmt->fetch()){
-            echo "Kasutaja logis sisse id=".$id_from_db;
             
-            // sessioon, salvestatakse serveris
-            $_SESSION['logged_in_user_id'] = $id_from_db;
-            $_SESSION['logged_in_user_email'] = $email_from_db;
+            $success = new StdClass();
             
-            //suuname kasutaja teisele lehel
-            header("Location: data.php");
+            $success->message = "Sai edukalt sisse logitud";
+            
+            $user = new StdClass();
+            $user->id = $id_from_db;
+            $user->email = $email_from_db;
+            
+            $success->user = $user;
+            
+            $response->success = $success;
+    
             
         }else{
             echo "Wrong credentials!";
         }
         $stmt->close();
-
+        
+        return $response;
     }
     
     function createUser($create_email, $hash){
+        
+        //objket, kus tagastame error(id, message) või success'i(mesage)
+        $response = New StdClass();
+        
+        $stmt = $this->connection->prepare("SELECT id FROM user_sample WHERE email=?");
+        $stmt->bind_param("s", $create_email);
+        $stmt->bind_result($id);
+        $stmt->execute();
+        
+        //kas saime era andmeid
+        if($stmt->fetch()){
+            //email on juba olemas
+            $error = new StdClass();
+            $error->id = 0;
+            $error->message = "Email on juba kasutusel";
+            
+            $response->error = $error;
+            
+            //pärast return käsku, fn'i enam edasi ei vaadata
+            return $response;
+        }
 
+        //siia olen jõunud, siis kui emaili ei olnud 
+        
         $stmt = $this->connection->prepare("INSERT INTO user_sample (email, password) VALUES (?,?)");
         $stmt->bind_param("ss", $create_email, $hash);
-        $stmt->execute();
+        if($stmt->execute()){
+            //sisestamine õnnestus
+            $success = new StdClass();
+            $success->message = "Kasutaja edukalt loodud";
+            
+            $response->success = $success;
+        }else{
+            //ei õnnestunud
+            $error = new StdClass();
+            $error->id = 1;
+            $error->message = "Midagi läks katki";
+            
+            $response->error = $error;
+        }
         $stmt->close();
+        
+        return $response;
         
     }
 
